@@ -1,0 +1,95 @@
+name: Build
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  NDK_VERSION: r24
+  SDK_VERSION: 24
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: ubuntu-24.04, target_arch: arm }
+          - { os: ubuntu-24.04, target_arch: arm64 }
+          - { os: ubuntu-24.04, target_arch: x86 }
+          - { os: ubuntu-24.04, target_arch: x86_64 }
+
+    runs-on: ${{ matrix.config.os }}
+    env:
+      TARGET_ARCH: ${{ matrix.config.target_arch }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y git make clang gcc-multilib g++-multilib zlib1g-dev zlib1g-dev:i386
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: '.python-version'
+
+      - name: Build
+        env:
+          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          ./scripts/patch.sh
+          ./scripts/build.sh $NDK_PATH $SDK_VERSION $TARGET_ARCH
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-android-${{ env.TARGET_ARCH }}
+          path: out
+
+  finalize:
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: node-android-*
+          merge-multiple: true
+          path: out
+
+      - name: Finalize
+        run: |
+          ./scripts/headers.sh
+          zip -r node-android.zip ./out
+
+      - name: Upload to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: node-android.zip
+          asset_name: node-android-${{ github.ref }}.zip
+          tag: ${{ github.ref }}
+          overwrite: true

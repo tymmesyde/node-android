@@ -1,0 +1,44 @@
+diff --git a/node/android_configure.py b/node/android_configure.py
+index 57d94023915..bb45e67a09a 100644
+--- a/node/android_configure.py
++++ b/node/android_configure.py
+@@ -37,16 +37,21 @@ arch = sys.argv[3]
+ if arch == "arm":
+     DEST_CPU = "arm"
+     TOOLCHAIN_PREFIX = "armv7a-linux-androideabi"
++    COMPILER_MODE = "32"
+ elif arch in ("aarch64", "arm64"):
+     DEST_CPU = "arm64"
+     TOOLCHAIN_PREFIX = "aarch64-linux-android"
++    COMPILER_MODE = "64"
+     arch = "arm64"
+ elif arch == "x86":
+     DEST_CPU = "ia32"
+     TOOLCHAIN_PREFIX = "i686-linux-android"
++    COMPILER_MODE = "32"
++    arch = "ia32"
+ elif arch == "x86_64":
+     DEST_CPU = "x64"
+     TOOLCHAIN_PREFIX = "x86_64-linux-android"
++    COMPILER_MODE = "64"
+     arch = "x64"
+ else:
+     print("\033[91mError: \033[0m" + "Invalid target architecture, must be one of: arm, arm64, aarch64, x86, x86_64")
+@@ -65,6 +70,8 @@ elif platform.system() == "Linux":
+ os.environ['PATH'] += os.pathsep + toolchain_path + "/bin"
+ os.environ['CC'] = toolchain_path + "/bin/" + TOOLCHAIN_PREFIX + android_sdk_version + "-" +  "clang"
+ os.environ['CXX'] = toolchain_path + "/bin/" + TOOLCHAIN_PREFIX + android_sdk_version + "-" + "clang++"
++os.environ['CC_host'] = "clang -m" + COMPILER_MODE
++os.environ['CXX_host'] = "clang++ -m" + COMPILER_MODE
+ 
+ GYP_DEFINES = "target_arch=" + arch
+ GYP_DEFINES += " v8_target_arch=" + arch
+@@ -72,5 +79,7 @@ GYP_DEFINES += " android_target_arch=" + arch
+ GYP_DEFINES += " host_os=" + host_os + " OS=android"
+ os.environ['GYP_DEFINES'] = GYP_DEFINES
+ 
++CONFIGURE_FLAGS = " --shared --shared-zlib --without-intl --without-npm --without-corepack --without-inspector"
++
+ if os.path.exists("./configure"):
+-    os.system("./configure --dest-cpu=" + DEST_CPU + " --dest-os=android --openssl-no-asm --cross-compiling")
++    os.system("./configure --dest-cpu=" + DEST_CPU + " --dest-os=android --openssl-no-asm --cross-compiling" + CONFIGURE_FLAGS)

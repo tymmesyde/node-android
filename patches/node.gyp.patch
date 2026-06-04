@@ -1,0 +1,15 @@
+diff --git a/node//node.gyp b/node//node.gyp
+index 08cb3f38e8f..b21becc4f74 100644
+--- a/node//node.gyp
++++ b/node//node.gyp
+@@ -1304,6 +1304,10 @@
+         [ 'OS=="win" and node_shared=="true"', {
+           'type': 'none',
+         }],
++        # Skip cctest while building for Android
++        [ 'OS=="android"', {
++          'type': 'none',
++        }],
+         [ 'node_shared=="true"', {
+           'xcode_settings': {
+             'OTHER_LDFLAGS': [ '-Wl,-rpath,@loader_path', ],
